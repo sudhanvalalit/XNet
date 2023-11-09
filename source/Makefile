@@ -2,6 +2,9 @@
 ## Makefile for XNet and associated programs
 ##
 
+## Define the shell (for target commands)
+SHELL = /bin/bash
+
 ## Build search path
 VPATH = .
 
@@ -78,18 +81,24 @@ $(EXE): $(BASE) xnet_jacobian_$(SOLVER).o $(SOLVER_OBJ) $(LAPACK_OBJ) $(DRIVER)
 	    $(BASE) xnet_jacobian_$(SOLVER).o $(notdir $(SOLVER_OBJ) $(LAPACK_OBJ)) $(DRIVER) \
 	    $(SOLVER_LIBDIR) $(SOLVER_LIBS) $(LAPACK_LIBDIR) $(LAPACK_LIBS)
 
-all: xnet_dense xnet_MA48 xnet_PARDISO net_setup
+all: xnet_dense net_setup xnse
 
-test: test_serial test_parallel test_heat
+test: test_serial test_heat test_setup test_nse
 
-test_serial: xnet_PARDISO
-	@cd ../test ; ./test_xnet.sh 0
+test_serial: xnet_dense
+	@cd ../test ; ln -s ../tools/starkiller-helmholtz/helm_table.dat . ; ./test_xnet.sh ../source/xnetd 0
 
-test_heat: xnet_PARDISO
-	@cd ../test ; ./test_xnet.sh 50
+test_heat: xnet_dense
+	@cd ../test ; ln -s ../tools/starkiller-helmholtz/helm_table.dat . ; ./test_xnet.sh ../source/xnetd 50
 
-test_simple: xnet_PARDISO
-	@cd ../test ; ./test_xnet.sh 51
+test_simple: xnet_dense
+	@cd ../test ; ln -s ../tools/starkiller-helmholtz/helm_table.dat . ; ./test_xnet.sh ../source/xnetd 51
+
+test_setup: net_setup
+	@cd ../test/Data_SN160 ; ../../source/net_setup <<< "net_setup test"
+
+test_nse: xnse
+	@cd ../test ; ln -s ../tools/starkiller-helmholtz/helm_table.dat . ; ./test_xnet.sh ../source/xnse 81
 
 #
 # Rules to build specific configurations of XNet and supporting tools
