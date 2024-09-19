@@ -44,6 +44,8 @@
 ##                                        alpha (16)                      51
 ##                                        torch47 (47)                    52
 ##                                        SN160 (160)                     53
+##                                        SN160 (160) (BDF integrator)    54
+##                                        SN231 (231) (log-ft rates)      55
 ##       =====================================================================
 ##       All parallel test problems                                       30
 ##       4 different SN                   alpha (16)                      31
@@ -69,8 +71,8 @@ xnet_mpi=$xnetp_mpi
 
 function test_diff {
   # Remove timers from files for diff
-  sed -e '/^Timers:/,+1d' $1 >| diff1.txt
-  sed -e '/^Timers:/,+1d' $2 >| diff2.txt
+  sed -e '/^Timers Summary:/,+14d' $1 >| diff1.txt
+  sed -e '/^Timers Summary:/,+14d' $2 >| diff2.txt
   if ! diff -q diff1.txt diff2.txt >/dev/null 2>&1; then
     echo "Warning: $1 differs from $2"
     echo "File diff_$3 contains diff output"
@@ -96,6 +98,20 @@ function do_test_small {
 
 function do_test_heat {
   cat test_settings_heat Test_Problems/setup_$2 >| control
+  $1
+  mv -f net_diag01 Test_Results/net_diag_$2
+  test_diff Test_Results/net_diag_$2 Test_Problems/Results/net_diag_$2 $2
+}
+
+function do_test_bdf {
+  cat test_settings_bdf Test_Problems/setup_$2 >| control
+  $1
+  mv -f net_diag01 Test_Results/net_diag_$2
+  test_diff Test_Results/net_diag_$2 Test_Problems/Results/net_diag_$2 $2
+}
+
+function do_test_logft {
+  cat test_settings_logft Test_Problems/setup_$2 >| control
   $1
   mv -f net_diag01 Test_Results/net_diag_$2
   test_diff Test_Results/net_diag_$2 Test_Problems/Results/net_diag_$2 $2
@@ -280,6 +296,20 @@ for xnet in ${xnet_list[@]}; do
       echo "Test: Self-heating from explosive burning of degenerate C/O with SN160 network"
       test_th="heat"; test_net="sn160"; test_name=${test_th}_${test_net}
       do_test_heat $xnet $test_name
+    fi
+
+    # Self-heating test using SN160 (explosive burning of degenerate C/O) (with BDF integrator)
+    if [ $itest -eq 50 -o $itest -eq 54 ]; then
+      echo "Test: Self-heating from explosive burning of degenerate C/O with SN160 network and BDF integrator"
+      test_th="bdf"; test_net="sn160"; test_name=${test_th}_${test_net}
+      do_test_bdf $xnet $test_name
+    fi
+
+    # Self-heating test using SN160 (explosive burning of degenerate C/O) (with BDF integrator)
+    if [ $itest -eq 50 -o $itest -eq 55 ]; then
+      echo "Test: Self-heating from explosive burning of degenerate C/O with SN231 network and log(ft) rates"
+      test_th="logft"; test_net="sn231"; test_name=${test_th}_${test_net}
+      do_test_logft $xnet $test_name
     fi
 
     # Zone batching test using alpha (explosive burning of degenerate C/O)

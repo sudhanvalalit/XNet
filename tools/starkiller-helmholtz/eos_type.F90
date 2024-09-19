@@ -1,70 +1,69 @@
+#include "../../source/xnet_macros.fh"
+
 module eos_type_module
 
-  use xnet_types, only : rt => dp
+  use xnet_types, only: dp
   use xnet_util, only: xnet_terminate
 
   implicit none
+  private
 
-  private :: rt
-
-  double precision, parameter, private :: ONE = 1.0d0
-  double precision, parameter, private :: ZERO = 0.0d0
-  double precision, parameter, private :: small_x = 0.0d0
-
-  integer, parameter :: eos_input_rt = 1  ! rho, T are inputs
-  integer, parameter :: eos_input_rh = 2  ! rho, h are inputs
-  integer, parameter :: eos_input_tp = 3  ! T, p are inputs
-  integer, parameter :: eos_input_rp = 4  ! rho, p are inputs
-  integer, parameter :: eos_input_re = 5  ! rho, e are inputs
-  integer, parameter :: eos_input_ps = 6  ! p, s are inputs
-  integer, parameter :: eos_input_ph = 7  ! p, h are inputs
-  integer, parameter :: eos_input_th = 8  ! T, h are inputs
+  integer, parameter, public :: eos_input_rt = 1  ! rho, T are inputs
+  integer, parameter, public :: eos_input_rh = 2  ! rho, h are inputs
+  integer, parameter, public :: eos_input_tp = 3  ! T, p are inputs
+  integer, parameter, public :: eos_input_rp = 4  ! rho, p are inputs
+  integer, parameter, public :: eos_input_re = 5  ! rho, e are inputs
+  integer, parameter, public :: eos_input_ps = 6  ! p, s are inputs
+  integer, parameter, public :: eos_input_ph = 7  ! p, h are inputs
+  integer, parameter, public :: eos_input_th = 8  ! T, h are inputs
 
   ! these are used to allow for a generic interface to the
   ! root finding
-  integer, parameter :: itemp = 1
-  integer, parameter :: idens = 2
-  integer, parameter :: iener = 3
-  integer, parameter :: ienth = 4
-  integer, parameter :: ientr = 5
-  integer, parameter :: ipres = 6
+  integer, parameter, public :: itemp = 1
+  integer, parameter, public :: idens = 2
+  integer, parameter, public :: iener = 3
+  integer, parameter, public :: ienth = 4
+  integer, parameter, public :: ientr = 5
+  integer, parameter, public :: ipres = 6
 
   ! error codes
-  integer, parameter :: ierr_general         = 1
-  integer, parameter :: ierr_input           = 2
-  integer, parameter :: ierr_iter_conv       = 3
-  integer, parameter :: ierr_neg_e           = 4
-  integer, parameter :: ierr_neg_p           = 5
-  integer, parameter :: ierr_neg_h           = 6
-  integer, parameter :: ierr_neg_s           = 7
-  integer, parameter :: ierr_iter_var        = 8
-  integer, parameter :: ierr_init            = 9
-  integer, parameter :: ierr_init_xn         = 10
-  integer, parameter :: ierr_out_of_bounds   = 11
-  integer, parameter :: ierr_not_implemented = 12
+  integer, parameter, public :: ierr_general         = 1
+  integer, parameter, public :: ierr_input           = 2
+  integer, parameter, public :: ierr_iter_conv       = 3
+  integer, parameter, public :: ierr_neg_e           = 4
+  integer, parameter, public :: ierr_neg_p           = 5
+  integer, parameter, public :: ierr_neg_h           = 6
+  integer, parameter, public :: ierr_neg_s           = 7
+  integer, parameter, public :: ierr_iter_var        = 8
+  integer, parameter, public :: ierr_init            = 9
+  integer, parameter, public :: ierr_init_xn         = 10
+  integer, parameter, public :: ierr_out_of_bounds   = 11
+  integer, parameter, public :: ierr_not_implemented = 12
 
   ! Minimum and maximum thermodynamic quantities permitted by the EOS.
 
-  real(rt), allocatable :: mintemp
-  real(rt), allocatable :: maxtemp
-  real(rt), allocatable :: mindens
-  real(rt), allocatable :: maxdens
-  real(rt), allocatable :: minx
-  real(rt), allocatable :: maxx
-  real(rt), allocatable :: minye
-  real(rt), allocatable :: maxye
-  real(rt), allocatable :: mine
-  real(rt), allocatable :: maxe
-  real(rt), allocatable :: minp
-  real(rt), allocatable :: maxp
-  real(rt), allocatable :: mins
-  real(rt), allocatable :: maxs
-  real(rt), allocatable :: minh
-  real(rt), allocatable :: maxh
+  real(dp), allocatable, public :: mintemp
+  real(dp), allocatable, public :: maxtemp
+  real(dp), allocatable, public :: mindens
+  real(dp), allocatable, public :: maxdens
+  real(dp), allocatable, public :: minx
+  real(dp), allocatable, public :: maxx
+  real(dp), allocatable, public :: minye
+  real(dp), allocatable, public :: maxye
+  real(dp), allocatable, public :: mine
+  real(dp), allocatable, public :: maxe
+  real(dp), allocatable, public :: minp
+  real(dp), allocatable, public :: maxp
+  real(dp), allocatable, public :: mins
+  real(dp), allocatable, public :: maxs
+  real(dp), allocatable, public :: minh
+  real(dp), allocatable, public :: maxh
 
-  !$acc declare &
-  !$acc create(mintemp, maxtemp, mindens, maxdens, minx, maxx, minye, maxye) &
-  !$acc create(mine, maxe, minp, maxp, mins, maxs, minh, maxh)
+  !XDIR XDECLARE_VAR(mintemp, maxtemp, mindens, maxdens, minx, maxx, minye, maxye)
+  !XDIR XDECLARE_VAR(mine, maxe, minp, maxp, mins, maxs, minh, maxh)
+
+  public :: clean_state, print_state, eos_get_small_temp, eos_get_small_dens
+  public :: eos_get_max_temp, eos_get_max_dens, eos_input_has_var
 
   ! A generic structure holding thermodynamic quantities and their derivatives,
   ! plus some other quantities of interest.
@@ -107,44 +106,44 @@ module eos_type_module
   ! dpdr_e   -- d pressure / d rho |_energy
   ! conductivity -- thermal conductivity (in erg/cm/K/sec)
 
-  type :: eos_t
+  type, public :: eos_t
 
-    real(rt) :: rho
-    real(rt) :: T
-    real(rt) :: p
-    real(rt) :: e
-    real(rt) :: h
-    real(rt) :: s
+    real(dp) :: rho
+    real(dp) :: T
+    real(dp) :: p
+    real(dp) :: e
+    real(dp) :: h
+    real(dp) :: s
 
-    real(rt) :: dpdT
-    real(rt) :: dpdr
-    real(rt) :: dedT
-    real(rt) :: dedr
-    real(rt) :: dhdT
-    real(rt) :: dhdr
-    real(rt) :: dsdT
-    real(rt) :: dsdr
-    real(rt) :: dpde
-    real(rt) :: dpdr_e
+    real(dp) :: dpdT
+    real(dp) :: dpdr
+    real(dp) :: dedT
+    real(dp) :: dedr
+    real(dp) :: dhdT
+    real(dp) :: dhdr
+    real(dp) :: dsdT
+    real(dp) :: dsdr
+    real(dp) :: dpde
+    real(dp) :: dpdr_e
 
-    real(rt) :: cv
-    real(rt) :: cp
-    real(rt) :: xne
-    real(rt) :: xnp
-    real(rt) :: eta
-    real(rt) :: detadt
-    real(rt) :: pele
-    real(rt) :: ppos
-    real(rt) :: mu
-    real(rt) :: mu_e
-    real(rt) :: y_e
-    real(rt) :: gam1
-    real(rt) :: cs
+    real(dp) :: cv
+    real(dp) :: cp
+    real(dp) :: xne
+    real(dp) :: xnp
+    real(dp) :: eta
+    real(dp) :: detadt
+    real(dp) :: pele
+    real(dp) :: ppos
+    real(dp) :: mu
+    real(dp) :: mu_e
+    real(dp) :: y_e
+    real(dp) :: gam1
+    real(dp) :: cs
 
-    real(rt) :: abar
-    real(rt) :: zbar
+    real(dp) :: abar
+    real(dp) :: zbar
 
-    real(rt) :: conductivity
+    real(dp) :: conductivity
 
   end type eos_t
 
@@ -157,8 +156,6 @@ contains
     implicit none
 
     type(eos_t) :: to_eos, from_eos
-
-    !$gpu
 
     to_eos % rho = from_eos % rho
     to_eos % T = from_eos % T
@@ -208,8 +205,6 @@ contains
 
     type (eos_t), intent(inout) :: state
 
-    !$gpu
-
     state % T = min(maxtemp, max(mintemp, state % T))
     state % rho = min(maxdens, max(mindens, state % rho))
 
@@ -236,13 +231,11 @@ contains
 
   subroutine eos_get_small_temp(small_temp_out)
 
-    !$acc routine seq
+    !XDIR XROUTINE_SEQ
 
     implicit none
 
-    real(rt), intent(out) :: small_temp_out
-
-    !$gpu
+    real(dp), intent(out) :: small_temp_out
 
     small_temp_out = mintemp
 
@@ -252,13 +245,11 @@ contains
 
   subroutine eos_get_small_dens(small_dens_out)
 
-    !$acc routine seq
+    !XDIR XROUTINE_SEQ
 
     implicit none
 
-    real(rt), intent(out) :: small_dens_out
-
-    !$gpu
+    real(dp), intent(out) :: small_dens_out
 
     small_dens_out = mindens
 
@@ -268,13 +259,11 @@ contains
 
   subroutine eos_get_max_temp(max_temp_out)
 
-    !$acc routine seq
+    !XDIR XROUTINE_SEQ
 
     implicit none
 
-    real(rt), intent(out) :: max_temp_out
-
-    !$gpu
+    real(dp), intent(out) :: max_temp_out
 
     max_temp_out = maxtemp
 
@@ -284,13 +273,11 @@ contains
 
   subroutine eos_get_max_dens(max_dens_out)
 
-    !$acc routine seq
+    !XDIR XROUTINE_SEQ
 
     implicit none
 
-    real(rt), intent(out) :: max_dens_out
-
-    !$gpu
+    real(dp), intent(out) :: max_dens_out
 
     max_dens_out = maxdens
 
@@ -305,8 +292,6 @@ contains
 
     integer, intent(in) :: input, ivar
     logical :: has
-
-    !$gpu
 
     has = .false.
     

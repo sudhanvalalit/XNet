@@ -1,0 +1,61 @@
+#if defined(XNET_OACC)
+#define XDIR               $acc
+#define XLOOP(N)           parallel loop gang vector collapse(N)
+#define XLOOP_OUTER(N)     parallel loop gang collapse(N)
+#define XLOOP_INNER(N)     loop vector collapse(N)
+#define XLOOP_SERIAL(N)    loop seq collapse(N)
+#define XPRIVATE(...)      private(__VA_ARGS__)
+#define XREDUCTION(OP,...) reduction( OP:__VA_ARGS__)
+#define XPRESENT(...)      present(__VA_ARGS__)
+#define XUPDATE            update
+#define XDEVICE(...)       device(__VA_ARGS__)
+#define XHOST(...)         host(__VA_ARGS__)
+#define XCREATE(...)       create(__VA_ARGS__)
+#define XCOPYIN(...)       copyin(__VA_ARGS__)
+#define XCOPYOUT(...)      copyout(__VA_ARGS__)
+#define XCOPY(...)         copy(__VA_ARGS__)
+#define XDELETE(...)       delete(__VA_ARGS__)
+#define XENTER_DATA        enter data
+#define XEXIT_DATA         exit data
+#define XDATA              data
+#define XEND_DATA          end data
+#define XHOST_DATA         host_data
+#define XEND_HOST_DATA     end host_data
+#define XDEV_PTR(...)      use_device(__VA_ARGS__)
+#define XDECLARE_VAR(...)  declare create(__VA_ARGS__)
+#define XROUTINE_SEQ       routine seq
+#define XROUTINE_VECTOR    routine vector
+#define XASYNC(N)          async(N)
+#define XWAIT(N)           wait(N)
+#define XATOMIC            atomic
+#elif defined(XNET_OMP_OL)
+#define XDIR               $omp
+#define XLOOP(N)           target teams distribute parallel do simd collapse(N)
+#define XLOOP_OUTER(N)     target teams distribute collapse(N)
+#define XLOOP_INNER(N)     parallel do simd collapse(N)
+#define XLOOP_SERIAL(N)    nothing
+#define XPRIVATE(...)      private(__VA_ARGS__)
+#define XREDUCTION(OP,...) reduction(OP:__VA_ARGS__)
+#define XPRESENT(...)      & !present
+#define XUPDATE            target update
+#define XDEVICE(...)       to(__VA_ARGS__)
+#define XHOST(...)         from(__VA_ARGS__)
+#define XCREATE(...)       map(alloc:__VA_ARGS__)
+#define XCOPYIN(...)       map(to:__VA_ARGS__)
+#define XCOPYOUT(...)      map(from:__VA_ARGS__)
+#define XCOPY(...)         map(tofrom:__VA_ARGS__)
+#define XDELETE(...)       map(release:__VA_ARGS__)
+#define XENTER_DATA        target enter data
+#define XEXIT_DATA         target exit data
+#define XDATA              target data
+#define XEND_DATA          end target data
+#define XHOST_DATA         target data
+#define XEND_HOST_DATA     end target data
+#define XDEV_PTR(...)      use_device_ptr(__VA_ARGS__)
+#define XDECLARE_VAR(...)  declare target to(__VA_ARGS__)
+#define XROUTINE_SEQ       declare target
+#define XROUTINE_VECTOR    declare target
+#define XASYNC(N)          nowait
+#define XWAIT(N)           barrier
+#define XATOMIC            atomic
+#endif

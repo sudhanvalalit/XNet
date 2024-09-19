@@ -95,8 +95,8 @@ ifeq ($(PE_ENV),INTEL)
     OPT_FFLAGS    =
     DEBUG_FFLAGS  = -check all,noarg_temp_created -fpe0 -gen-interfaces -warn interfaces
 
-    F77FLAGS      = -real-size 64 -integer-size 32
-    F90FLAGS      = -real-size 64 -integer-size 32
+    F77FLAGS      = -fpp -real-size 64 -integer-size 32
+    F90FLAGS      = -fpp -real-size 64 -integer-size 32
 
     # C-specific flags
     OPT_CFLAGS    =
@@ -132,17 +132,17 @@ else ifeq ($(PE_ENV),PGI)
         OPENMP    = -mp -Mnoopenmp
     endif
     ifeq ($(OPENACC_MODE),ON)
-        OPENACC   = -acc -ta=tesla:cc70,cuda10.1,ptxinfo -Minfo=accel
+        OPENACC   = -acc -ta=tesla:ptxinfo -Minfo=accel
     else
-        OPENACC   = -acclibs
+        OPENACC   =
     endif
 
     # Fortran-specific flags
     OPT_FFLAGS    =
     DEBUG_FFLAGS  = -Ktrap=fp -Mbounds -Mchkptr -Mdclchk
 
-    F77FLAGS      = -r8 -i4 -Mfixed
-    F90FLAGS      = -r8 -i4
+    F77FLAGS      = -Mpreprocess -r8 -i4 -Mfixed
+    F90FLAGS      = -Mpreprocess -r8 -i4
 
     # C-specific flags
     OPT_CFLAGS    =
@@ -152,7 +152,7 @@ else ifeq ($(PE_ENV),PGI)
     OPT_LDFLAGS   = -pgc++libs
     DEBUG_LDFLAGS = -pgc++libs
 
-else ifeq ($(PE_ENV),NVIDIA)
+else ifeq ($(findstring $(PE_ENV),NVIDIA NVHPC),$(PE_ENV))
 
     ifneq ($(FC),ftn)
         FC        = nvfortran
@@ -160,7 +160,7 @@ else ifeq ($(PE_ENV),NVIDIA)
         CXX       = nvc++
         LDR       = nvfortran
 
-        ARCHOPT   =
+        ARCHOPT   = -tp=pwr9
     endif
     ifneq ($(findstring $(MACHINE),$(IBM_MACHINE)),$(MACHINE))
         INLINE    =# -Mipa=fast,inline,safe
@@ -169,7 +169,7 @@ else ifeq ($(PE_ENV),NVIDIA)
     endif
 
     # generic flags
-    OPT_FLAGS     = -g -gopt -fast $(ARCHOPT) $(INLINE)
+    OPT_FLAGS     = -g -gopt -O2 $(ARCHOPT) $(INLINE)
     DEBUG_FLAGS   = -g -gopt -O0 -traceback
 
     ifeq ($(OPENMP_MODE),ON)
@@ -180,15 +180,15 @@ else ifeq ($(PE_ENV),NVIDIA)
     ifeq ($(OPENACC_MODE),ON)
         OPENACC   = -acc -gpu=ptxinfo -Minfo=accel
     else
-        OPENACC   = -acclibs
+        OPENACC   =
     endif
 
     # Fortran-specific flags
     OPT_FFLAGS    =
     DEBUG_FFLAGS  = -Ktrap=fp -Mbounds -Mchkptr -Mdclchk
 
-    F77FLAGS      = -r8 -i4 -Mfixed
-    F90FLAGS      = -r8 -i4
+    F77FLAGS      = -Mpreprocess -r8 -i4 -Mfixed
+    F90FLAGS      = -Mpreprocess -r8 -i4
 
     # C-specific flags
     OPT_CFLAGS    =
@@ -234,8 +234,8 @@ else ifeq ($(PE_ENV),GNU)
     DEBUG_FFLAGS  = -fcheck=bounds,do,mem,pointer -ffpe-trap=invalid,zero,overflow -fbacktrace \
                     -Wno-unused-dummy-argument -Wno-unused-label -Wno-maybe-uninitialized
 
-    F77FLAGS      = -fdefault-real-8 -fdefault-double-8 -fimplicit-none -Wno-compare-reals
-    F90FLAGS      = -fdefault-real-8 -fdefault-double-8 -fimplicit-none -ffree-line-length-none
+    F77FLAGS      = -cpp -fdefault-real-8 -fdefault-double-8 -fimplicit-none -Wno-compare-reals
+    F90FLAGS      = -cpp -fdefault-real-8 -fdefault-double-8 -fimplicit-none -ffree-line-length-none
 
     # C-specific flags
     OPT_CFLAGS    =
@@ -269,8 +269,8 @@ else ifeq ($(PE_ENV),CRAY)
     OPT_FFLAGS    =
     DEBUG_FFLAGS  =
 
-    F77FLAGS      = -s real64 -s integer32
-    F90FLAGS      = -s real64 -s integer32
+    F77FLAGS      = -eZ -s real64 -s integer32
+    F90FLAGS      = -eZ -s real64 -s integer32
 
     # C-specific flags
     OPT_CFLAGS    =
@@ -311,8 +311,8 @@ else ifeq ($(PE_ENV),XL)
     OPT_FFLAGS    =
     DEBUG_FFLAGS  = -qflag=i:w
 
-    F77FLAGS      = -qintsize=4 -qrealsize=8 -qzerosize -qport=c_loc -qundef -qsuppress=cmpmsg -qfixed
-    F90FLAGS      = -qintsize=4 -qrealsize=8 -qzerosize -qport=c_loc -qundef -qsuppress=cmpmsg
+    F77FLAGS      = -qpreprocess -qintsize=4 -qrealsize=8 -qzerosize -qport=c_loc -qundef -qsuppress=cmpmsg -qfixed
+    F90FLAGS      = -qpreprocess -qintsize=4 -qrealsize=8 -qzerosize -qport=c_loc -qundef -qsuppress=cmpmsg
 
     # C-specific flags
     OPT_CFLAGS    =
@@ -407,8 +407,10 @@ LAPACK_LIBS   = $($(LAPACK_VER)_LIBS)
 LAPACK_SRC    = $($(LAPACK_VER)_SRC)
 LAPACK_OBJ    = $(addsuffix .o,$(basename $(LAPACK_SRC)))
 
-LAPACK_OBJ_F90 = $(addsuffix .o,$(basename $(filter %.f90 %.F90,$(LAPACK_SRC))))
-LAPACK_OBJ_F   = $(addsuffix .o,$(basename $(filter %.f %.F,$(LAPACK_SRC))))
+LAPACK_OBJ_f90 = $(addsuffix .o,$(basename $(filter %.f90,$(LAPACK_SRC))))
+LAPACK_OBJ_F90 = $(addsuffix .o,$(basename $(filter %.F90,$(LAPACK_SRC))))
+LAPACK_OBJ_f   = $(addsuffix .o,$(basename $(filter %.f,$(LAPACK_SRC))))
+LAPACK_OBJ_F   = $(addsuffix .o,$(basename $(filter %.F,$(LAPACK_SRC))))
 LAPACK_OBJ_C   = $(addsuffix .o,$(basename $(filter %.c,$(LAPACK_SRC))))
 LAPACK_OBJ_CPP = $(addsuffix .o,$(basename $(filter %.cpp %.cxx,$(LAPACK_SRC))))
 
@@ -453,14 +455,16 @@ SOLVER_LIBS    = $($(MATRIX_SOLVER)_LIBS)
 SOLVER_SRC     = $($(MATRIX_SOLVER)_SRC)
 SOLVER_OBJ     = $(addsuffix .o,$(basename $(SOLVER_SRC)))
 
-SOLVER_OBJ_F90 = $(addsuffix .o,$(basename $(filter %.f90 %.F90,$(SOLVER_SRC))))
-SOLVER_OBJ_F   = $(addsuffix .o,$(basename $(filter %.f %.F,$(SOLVER_SRC))))
+SOLVER_OBJ_f90 = $(addsuffix .o,$(basename $(filter %.f90,$(SOLVER_SRC))))
+SOLVER_OBJ_F90 = $(addsuffix .o,$(basename $(filter %.F90,$(SOLVER_SRC))))
+SOLVER_OBJ_f   = $(addsuffix .o,$(basename $(filter %.f,$(SOLVER_SRC))))
+SOLVER_OBJ_F   = $(addsuffix .o,$(basename $(filter %.F,$(SOLVER_SRC))))
 SOLVER_OBJ_C   = $(addsuffix .o,$(basename $(filter %.c,$(SOLVER_SRC))))
 SOLVER_OBJ_CPP = $(addsuffix .o,$(basename $(filter %.cpp,$(SOLVER_SRC))))
 
 ## Define compiler flags
-FLAGS     = $($(CMODE)_FLAGS)
-FFLAGS   += $(FLAGS) $($(CMODE)_FFLAGS) $(OPENMP) $(OPENACC)
-CFLAGS   += $(FLAGS) $($(CMODE)_CFLAGS) $(OPENMP) $(OPENACC)
-CXXFLAGS += $(FLAGS) $($(CMODE)_CXXFLAGS) $(OPENMP) $(OPENACC)
-LDFLAGS  += $(FLAGS) $($(CMODE)_LDFLAGS) $(OPENMP) $(OPENACC)
+FLAGS     = $($(CMODE)_FLAGS) $(EXTRA_FLAGS)
+FFLAGS   += $(FLAGS) $($(CMODE)_FFLAGS) $(OPENMP)
+CFLAGS   += $(FLAGS) $($(CMODE)_CFLAGS) $(OPENMP)
+CXXFLAGS += $(FLAGS) $($(CMODE)_CXXFLAGS) $(OPENMP)
+LDFLAGS  += $(FLAGS) $($(CMODE)_LDFLAGS) $(OPENMP)
